@@ -68,8 +68,10 @@ void unionArrays(int A[], int B[], int m, int n) {
 void intersectionArrays(int B[], int A[], int n, int m) {
     int printed = 0;
     for (int i = 0; i < m; i++) {
-        insert(A[i]);
+        if (search(A[i]) == -1)  // Only insert if the element doesn't already exist in the hash table.
+                insert(A[i]);
     }
+    
     for (int i = 0; i < n; i++) {
         if (search(B[i]) != -1) {
             printf("%d ", B[i]);

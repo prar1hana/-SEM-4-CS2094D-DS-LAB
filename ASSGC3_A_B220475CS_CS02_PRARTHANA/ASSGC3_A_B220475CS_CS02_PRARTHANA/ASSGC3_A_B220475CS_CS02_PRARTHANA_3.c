@@ -1,185 +1,220 @@
+/////////////////////////
+////////////prarthana//////////////
+//////////b220475cs//////////////
+
+
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
-#define MAX_NODES 100
+#define MAX_PATH_LENGTH 100
 
-// Structure to represent a node in the adjacency list
-typedef struct Node {
-    int vertex;
-    struct Node* next;
-} Node;
+struct AdjListNode {
+    int dest;
+    struct AdjListNode* next;
+};
 
-// Structure to represent the adjacency list
-typedef struct Graph {
-    Node* adjList[MAX_NODES];
-    int numNodes;
-} Graph;
+struct AdjList {
+    struct AdjListNode* head;
+};
 
-// Function to initialize a graph
-Graph* initializeGraph(int numNodes) {
-    Graph* graph = (Graph*)malloc(sizeof(Graph));
-    if (graph == NULL) {
-        printf("Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-    }
+struct Graph {
+    int V;
+    struct AdjList* array;
+};
 
-    graph->numNodes = numNodes;
+struct AdjListNode* newAdjListNode(int dest) {
+    struct AdjListNode* newNode = (struct AdjListNode*)malloc(sizeof(struct AdjListNode));
+    newNode->dest = dest;
+    newNode->next = NULL;
+    return newNode;
+}
 
-    for (int i = 0; i < numNodes; ++i) {
-        graph->adjList[i] = NULL;
-    }
+struct Graph* createGraph(int V) {
+    struct Graph* graph = (struct Graph*)malloc(sizeof(struct Graph));
+    graph->V = V;
+
+    graph->array = (struct AdjList*)malloc(V * sizeof(struct AdjList));
+
+    for (int i = 0; i < V; ++i)
+        graph->array[i].head = NULL;
 
     return graph;
 }
 
-// Function to add an edge to the graph
-void addEdge(Graph* graph, int src, int dest) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    if (newNode == NULL) {
-        printf("Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-    }
-    newNode->vertex = dest;
-    newNode->next = graph->adjList[src];
-    graph->adjList[src] = newNode;
+void addEdge(struct Graph* graph, int src, int dest) {
+    struct AdjListNode* newNode = newAdjListNode(dest);
+    newNode->next = graph->array[src].head;
+    graph->array[src].head = newNode;
 }
 
-// Function to print all paths from src to dest
-void printAllPathsUtil(Graph* graph, int src, int dest, int* visited, int* path, int pathLen) {
-    visited[src] = 1;
-    path[pathLen++] = src;
+void printPath(int path[], int path_index) {
+    for (int i = 0; i < path_index; i++) {
+        printf("%d ", path[i]);
+    }
+    printf("\n");
+}
 
-    if (src == dest) {
-        for (int i = 0; i < pathLen; ++i) {
-            printf("%d ", path[i]);
+void printAllPathsUtil(struct Graph* graph, int u, int d, bool visited[], int path[], int path_index, int* count, bool visited_paths[][MAX_PATH_LENGTH]) {
+    visited[u] = true;
+    path[path_index] = u;
+    path_index++;
+
+    if (u == d) {
+        if (!visited_paths[u][path_index - 1]) { // Check if this path has not been visited before
+            printPath(path, path_index);
+            (*count)++;
+            visited_paths[u][path_index - 1] = true; // Marking this path as visited
         }
-        printf("\n");
     } else {
-        Node* temp = graph->adjList[src];
-        while (temp != NULL) {
-            if (!visited[temp->vertex]) {
-                printAllPathsUtil(graph, temp->vertex, dest, visited, path, pathLen);
+        struct AdjListNode* pCrawl = graph->array[u].head;
+        while (pCrawl != NULL) {
+            if (!visited[pCrawl->dest]) {
+                printAllPathsUtil(graph, pCrawl->dest, d, visited, path, path_index, count, visited_paths);
             }
-            temp = temp->next;
+            pCrawl = pCrawl->next;
         }
     }
 
-    visited[src] = 0;
+    visited[u] = false; // Reset visited flag for the current node after all paths from it have been explored
 }
 
-// Function to print all paths from src to dest
-void printAllPaths(Graph* graph, int src, int dest) {
-    int* visited = (int*)calloc(graph->numNodes, sizeof(int));
-    int* path = (int*)malloc(graph->numNodes * sizeof(int));
-    int pathLen = 0;
-
-    //printf("Paths from %d to %d:\n", src, dest);
-    printAllPathsUtil(graph, src, dest, visited, path, pathLen);
-
+void printAllPaths(struct Graph* graph, int s, int d) {
+    bool* visited = malloc(graph->V * sizeof(bool));
+    bool visited_paths[graph->V][MAX_PATH_LENGTH]; // To keep track of visited paths
+    for (int i = 0; i < graph->V; i++) {
+        for (int j = 0; j < MAX_PATH_LENGTH; j++) {
+            visited_paths[i][j] = false; // Initialize visited paths array
+        }
+    }
+    int* path = malloc(graph->V * sizeof(int));
+    int count = 0;
+    printAllPathsUtil(graph, s, d, visited, path, 0, &count, visited_paths);
+    if (count == 0) {
+        printf("No path found between %d and %d\n", s, d);
+    }
     free(visited);
     free(path);
 }
-// Function to check if the graph has a cycle using DFS
-int hasCycle(Graph* graph, int v, int parent, int* visited) {
-    visited[v] = 1;
 
-    Node* temp = graph->adjList[v];
-    while (temp != NULL) {
-        int adjVertex = temp->vertex;
-        if (!visited[adjVertex]) {
-            if (hasCycle(graph, adjVertex, v, visited)) {
-                return 1;
-            }
-        } else if (adjVertex != parent) {
-            return 1;
-        }
-        temp = temp->next;
+bool isCyclicUtil(struct Graph* graph, int v, bool visited[], int parent) {
+    visited[v] = true;
+    struct AdjListNode* pCrawl = graph->array[v].head;
+    while (pCrawl != NULL) {
+        int dest = pCrawl->dest;
+        if (!visited[dest]) {
+            if (isCyclicUtil(graph, dest, visited, v))
+                return true;
+        } else if (dest != parent)
+            return true;
+        pCrawl = pCrawl->next;
     }
-    return 0;
+    return false;
 }
-// Function to check if the graph is a valid tree
-int CheckValidTree(Graph* graph) {
-    int* visited = (int*)calloc(graph->numNodes, sizeof(int));
 
-    // Check for cycle
-    if (hasCycle(graph, 0, -1, visited)) {
-        free(visited);
-        return 0;
+bool isCyclic(struct Graph* graph) {
+    bool* visited = (bool*)malloc(graph->V * sizeof(bool));
+    for (int i = 0; i < graph->V; i++)
+        visited[i] = false;
+    for (int i = 0; i < graph->V; i++)
+        if (!visited[i] && isCyclicUtil(graph, i, visited, -1))
+            return true;
+    return false;
+}
+
+void DFSUtil(struct Graph* graph, int v, bool visited[]) {
+    visited[v] = true;
+
+    struct AdjListNode* pCrawl = graph->array[v].head;
+    while (pCrawl != NULL) {
+        int dest = pCrawl->dest;
+        if (!visited[dest])
+            DFSUtil(graph, dest, visited);
+        pCrawl = pCrawl->next;
     }
+}
 
-    // Check if all vertices are reachable from the root
-    for (int i = 0; i < graph->numNodes; ++i) {
+bool isConnected(struct Graph* graph) {
+    bool* visited = (bool*)malloc(graph->V * sizeof(bool));
+    for (int i = 0; i < graph->V; i++)
+        visited[i] = false;
+    int count = 0;
+    for (int i = 0; i < graph->V; i++) {
         if (!visited[i]) {
-            free(visited);
-            return 0;
+            DFSUtil(graph, i, visited);
+            count++;
         }
     }
-
-    // Check for isolated vertices
-    for (int i = 0; i < graph->numNodes; ++i) {
-        if (graph->adjList[i] == NULL) {
-            free(visited);
-            return 0;
-        }
-    }
-
     free(visited);
-    return 1;
+    return count == 1;
 }
 
-
-
-int main() {
-    char choice;
-    int N;
-    //printf("Enter the number of nodes: ");
-    scanf("%d", &N);
-
-    Graph* graph = initializeGraph(N);
-
-   // Input the adjacency list
-for (int i = 0; i < N; ++i) {
-    int node, adjNode;
-   // printf("Enter node %d and its adjacent nodes separated by space (press Enter to finish): ", i + 1);
-    scanf("%d", &node);
-    while (1) {
-        scanf("%d", &adjNode);
-        addEdge(graph, node, adjNode);
-        char ch = getchar(); // read the next character
-        if (ch == '\n' || ch == EOF) // break if newline or end of file is encountered
-            break;
+bool hasIsolatedVertices(struct Graph* graph) {
+    for (int i = 0; i < graph->V; i++) {
+        if (graph->array[i].head == NULL)
+            return true;
     }
+    return false;
 }
 
+int valid_tree(struct Graph* graph) {
+    if (!isCyclic(graph) && isConnected(graph) && !hasIsolatedVertices(graph))
+        return -1;
+    else
+        return 1;
+}
 
-    while (1) {
-       // printf("Enter 'a' followed by node1 and node2 to print paths or 't' to check if the graph is a valid tree: ");
-        scanf(" %c", &choice);
-
-        if (choice == 'x') {
-            break;
-        } else if (choice == 'a') {
-            int node1, node2;
-            scanf("%d %d", &node1, &node2);
-            printAllPaths(graph, node1, node2);
-        } else if (choice == 't') {
-            if (CheckValidTree(graph)) {
-                printf("1\n");
-            } else {
-                printf("-1\n");
+int main(void) {
+    int V, i, j, c;
+    char s[1000];
+    int a[100];
+    scanf("%d", &V);
+    struct Graph* graph = createGraph(V);
+    for (i = 0; i < V; i++) {
+        scanf(" %[^\n]s", s);
+        c = 0;
+        j = 0;
+        while (s[j] != '\0') {
+            int num = 0;
+            while (s[j] >= '0' && s[j] <= '9') {
+                num = num * 10 + (s[j] - '0');
+                j++;
+            }
+            a[c++] = num;
+            if (s[j] == ' ') {
+                j++;
             }
         }
-    }
-
-    // Free allocated memory
-    for (int i = 0; i < N; ++i) {
-        Node* temp = graph->adjList[i];
-        while (temp != NULL) {
-            Node* prev = temp;
-            temp = temp->next;
-            free(prev);
+        for (j = 1; j < c; j++) {
+            addEdge(graph, i, a[j]);
+            addEdge(graph, a[j], i); // Adding reverse edges for undirected graph
         }
     }
+
+    int so, d;
+    char ch;
+    while (1) {
+        scanf(" %c", &ch);
+        if (ch == 'a') {
+            scanf("%d %d", &so, &d);
+            printAllPaths(graph, so, d);
+        } else if (ch == 't') {
+            printf("%d\n", valid_tree(graph));
+        } else if (ch == 'x') {
+            break;
+        }
+    }
+
+    // ignore (simply Freeing the allocated memory)
+    for (int i = 0; i < graph->V; ++i) {
+        struct AdjListNode* current = graph->array[i].head;
+        while (current != NULL) {
+            struct AdjListNode* next = current->next;
+            free(current);
+            current = next;
+        }
+    }
+    free(graph->array);
     free(graph);
 
     return 0;

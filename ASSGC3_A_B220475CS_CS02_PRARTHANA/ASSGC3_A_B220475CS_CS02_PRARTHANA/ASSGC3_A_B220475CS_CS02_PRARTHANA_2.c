@@ -1,190 +1,213 @@
+///////////////////////QUES2////////////////////////////BY PRARTHANA//////////
 #include <stdio.h>
 #include <stdlib.h>
 
-struct Graph {
-    int V;
-    int** adjMatrix;
+#define MAX_NODES 100
+
+struct Stack {
+    int top;
+    unsigned capacity;
+    int* array;
 };
 
-struct Graph* createGraph(int V) {
-    struct Graph* graph = (struct Graph*)malloc(sizeof(struct Graph));
-    graph->V = V;
+
+struct Stack* createStack(unsigned capacity) {
+    struct Stack* stack = (struct Stack*)malloc(sizeof(struct Stack));
+    stack->capacity = capacity;
+    stack->top = -1;
+    stack->array = (int*)malloc(stack->capacity * sizeof(int));
+    return stack;
+}
+
+
+int isEmpty(struct Stack* stack) {
+    return stack->top == -1;
+}
+
+
+void push(struct Stack* stack, int item) {
+    stack->array[++stack->top] = item;
+}
+
+
+int pop(struct Stack* stack) {
+    if (isEmpty(stack))
+        return -1;
+    return stack->array[stack->top--];
+}
+
+
+void BFS(int v, int N, int graph[MAX_NODES][MAX_NODES], int visited[MAX_NODES], struct Stack* stack) {
+    visited[v] = 1;
+    for (int i = 0; i < N; i++) {
+        if (graph[v][i] == 1 && !visited[i]) {
+            BFS(i, N, graph, visited, stack);
+        }
+    }
+    push(stack, v);
+}
+
+
+void BFS_Transpose(int v, int N, int transposedGraph[MAX_NODES][MAX_NODES], int visited[MAX_NODES]) {
+    visited[v] = 1;
+    for (int i = 0; i < N; i++) {
+        if (transposedGraph[v][i] == 1 && !visited[i]) {
+            BFS_Transpose(i, N, transposedGraph, visited);
+        }
+    }
+}
+
+
+int numberOfStronglyComponents(int N, int graph[MAX_NODES][MAX_NODES]) {
+    int visited[MAX_NODES] = {0};
+    struct Stack* stack = createStack(N);
+
     
-    graph->adjMatrix = (int*)malloc(V * sizeof(int));
-    for (int i = 0; i < V; i++)
-        graph->adjMatrix[i] = (int*)malloc(V * sizeof(int));
-
-    for (int i = 0; i < V; i++) {
-        for (int j = 0; j < V; j++) {
-            graph->adjMatrix[i][j] = 0;
+    for (int i = 0; i < N; i++) {
+        if (!visited[i]) {
+            BFS(i, N, graph, visited, stack);
         }
     }
 
-    return graph;
-}
-
-void addEdge(struct Graph* graph, int src, int dest) {
-    graph->adjMatrix[src][dest] = 1;
-}
-
-void freeGraph(struct Graph* graph) {
-    for (int i = 0; i < graph->V; i++)
-        free(graph->adjMatrix[i]);
-    free(graph->adjMatrix);
-    free(graph);
-}
-
-// Function to detect cycle in a directed graph using BFS
-int isCycle(struct Graph* graph) {
-    int V = graph->V;
-    int* in_degree = (int*)malloc(V * sizeof(int));
-
-    // Initialize all in-degrees as 0
-    for (int i = 0; i < V; i++)
-        in_degree[i] = 0;
-
-    // Traverse adjacency matrix to fill in-degrees
-    for (int u = 0; u < V; u++) {
-        for (int v = 0; v < V; v++) {
-            if (graph->adjMatrix[u][v] == 1)
-                in_degree[v]++;
+    
+    int transposedGraph[MAX_NODES][MAX_NODES];
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            transposedGraph[j][i] = graph[i][j];
         }
     }
 
-    // Create a queue and enqueue all vertices with in-degree 0
-    int* queue = (int*)malloc(V * sizeof(int));
-    int front = -1, rear = -1;
-    for (int i = 0; i < V; i++) {
-        if (in_degree[i] == 0)
-            queue[++rear] = i;
+    
+    for (int i = 0; i < N; i++) {
+        visited[i] = 0;
     }
 
-    // Initialize count of visited vertices
-    int cnt = 0;
-
-    // One by one dequeue vertices from queue and enqueue
-    // adjacents if in-degree of adjacent becomes 0
-    while (front != rear) {
-        // Extract front of queue (or perform dequeue)
-        // and add it to topological order
-        int u = queue[++front];
-        cnt++;
-
-        // Iterate through all neighbouring nodes of dequeued node u
-        for (int v = 0; v < V; v++) {
-            // If in-degree becomes zero, add it to queue
-            if (graph->adjMatrix[u][v] == 1 && --in_degree[v] == 0)
-                queue[++rear] = v;
+    int SCC_count = 0;
+    while (!isEmpty(stack)) {
+        int v = pop(stack);
+        if (!visited[v]) {
+            BFS_Transpose(v, N, transposedGraph, visited);
+            SCC_count++;
         }
     }
 
-    // Check if there was a cycle
-    if (cnt != V)
-        return 1; // Cycle exists
-    else
-        return 0; // No cycle
+    free(stack->array);
+    free(stack);
+    return SCC_count;
+}
+#define MAX_NODES 100
+
+struct Queue {
+    int front, rear, size;
+    unsigned capacity;
+    int* array;
+};
+
+struct Queue* createQueue(unsigned capacity) {
+    struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
+    queue->capacity = capacity;
+    queue->front = queue->size = 0;
+    queue->rear = capacity - 1;
+    queue->array = (int*)malloc(queue->capacity * sizeof(int));
+    return queue;
 }
 
-// Function to perform Breadth First Search
-void BFS(struct Graph* graph, int start, int* visited) {
-    int* queue = (int*)malloc(graph->V * sizeof(int));
-    int front = -1, rear = -1;
+int isFull(struct Queue* queue) {
+    return (queue->size == queue->capacity);
+}
 
-    visited[start] = 1;
-    queue[++rear] = start;
+int isEmptyq(struct Queue* queue) {
+    return (queue->size == 0);
+}
 
-    while (front != rear) {
-        int current = queue[++front];
-        for (int i = 0; i < graph->V; i++) {
-            if (graph->adjMatrix[current][i] == 1 && !visited[i]) {
-                visited[i] = 1;
-                queue[++rear] = i;
+void enqueue(struct Queue* queue, int item) {
+    if (isFull(queue))
+        return;
+    queue->rear = (queue->rear + 1) % queue->capacity;
+    queue->array[queue->rear] = item;
+    queue->size = queue->size + 1;
+}
+
+int dequeue(struct Queue* queue) {
+    if (isEmptyq(queue))
+        return -1;
+    int item = queue->array[queue->front];
+    queue->front = (queue->front + 1) % queue->capacity;
+    queue->size = queue->size - 1;
+    return item;
+}
+
+int topologicalSort(int N, int graph[MAX_NODES][MAX_NODES]) {
+    int inDegree[MAX_NODES] = {0};
+
+    // calculate in-degree for each vertex
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {//nested loop iterates over each adjacent vertex j 
+            if (graph[i][j] == 1)
+                inDegree[j]++;
+        }
+    }
+
+    struct Queue* queue = createQueue(N);
+    int visitedCount = 0;
+
+    // Enqueue vertices with in-degree 0
+    for (int i = 0; i < N; i++) {
+        if (inDegree[i] == 0)
+            enqueue(queue, i);
+    }
+
+    while (!isEmptyq(queue)) {
+        int u = dequeue(queue);
+        visitedCount++;//This count keeps track of the number of vertices processed during the topological sort.
+        for (int v = 0; v < N; v++) {
+            if (graph[u][v] == 1) {
+                inDegree[v]--;
+                if (inDegree[v] == 0)
+                    enqueue(queue, v);
             }
         }
     }
+
+    free(queue->array);
     free(queue);
-}
 
-// Function to perform Breadth First Search starting from each vertex
-void BFS_All(struct Graph* graph, int* visited) {
-    for (int i = 0; i < graph->V; i++) {
-        if (!visited[i])
-            BFS(graph, i, visited);
-    }
-}
+    // If all vertices are visited during the sort, topological sort is possible
+    return visitedCount == N;
+// } if the number of vertices visited during the topological sort is equal to the total number of vertices in the graph.
+// If all vertices are visited during the sort, it means a topological sort is possible, and it returns 1; otherwise, it returns 0.
 
-// Function to transpose the graph
-struct Graph* transposeGraph(struct Graph* graph) {
-    struct Graph* transposed = createGraph(graph->V);
-    for (int i = 0; i < graph->V; i++) {
-        for (int j = 0; j < graph->V; j++) {
-            transposed->adjMatrix[i][j] = graph->adjMatrix[j][i];
+int main(void) {
+  int tps;
+    int N;
+    scanf("%d", &N);
+    int graph[MAX_NODES][MAX_NODES];
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            scanf("%d", &graph[i][j]);
         }
     }
-    return transposed;
-}
-
-// Function to count Strongly Connected Components
-int stronglyConnectedComponentsCount(struct Graph* graph) {
-    int* visited = (int*)malloc(graph->V * sizeof(int));
-    for (int i = 0; i < graph->V; i++)
-        visited[i] = 0;
-
-    // Perform BFS for original graph and mark visited vertices
-    BFS_All(graph, visited);
-
-    // Transpose the graph
-    struct Graph* transposed = transposeGraph(graph);
-
-    // Reset visited array
-    for (int i = 0; i < graph->V; i++)
-        visited[i] = 0;
-
-    // Perform DFS on transposed graph and count SCCs
-    int count = 0;
-    for (int i = graph->V - 1; i >= 0; i--) {
-        if (!visited[i]) {
-            BFS(transposed, i, visited);
-            count++;
-        }
-    }
-
-    free(visited);
-    freeGraph(transposed);
-    return count;
-}
-
-int main() {
-    char choice;
-    int V;
-   // printf("Enter the number of vertices: ");
-    scanf("%d", &V);
-
-    struct Graph* graph = createGraph(V);
-
-   // printf("Enter the adjacency matrix representation of the graph:\n");
-    for (int i = 0; i < V; i++) {
-        for (int j = 0; j < V; j++) {
-            scanf("%d", &graph->adjMatrix[i][j]);
-        }
-    }
-    while (1) {
-        scanf(" %c", &choice); // Notice the space before %c to clear any previous newline characters
-        switch (choice) {
+    //If all vertices are visited during the sort, it means a topological sort is possible, and it returns 1; otherwise, it returns 0.
+    char option;
+    do {
+        scanf(" %c", &option);
+        switch(option) {
             case 't':
-                if (isCycle(graph))
-                    printf("-1\n");
-                else
-                    printf("1\n");
+            tps=topologicalSort(N, graph);
+            if(tps==0)
+              tps=-1;
+            else
+              tps=1;
+                printf("%d\n", tps);
                 break;
             case 'c':
-                printf("%d\n", 2*stronglyConnectedComponentsCount(graph));
+                 printf("%d\n", numberOfStronglyComponents(N, graph));
                 break;
             case 'x':
-                freeGraph(graph);
-                return 0;
+                break;
+            default:
+                printf("Invalid option\n");
         }
-    }
-
+    } while(option != 'x');
     return 0;
 }

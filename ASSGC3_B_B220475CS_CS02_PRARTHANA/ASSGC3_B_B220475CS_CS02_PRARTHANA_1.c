@@ -1,8 +1,6 @@
 ////////////////////////q1///////////////////////
 /////////////////////made by prarthana///////////
 ////////////////////b220475cs////////////////////
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -89,7 +87,7 @@ void Total_weight(int** graph, int** mst){
 int main() {
     int size;
     
-    scanf("%d ", &size);
+    scanf("%d", &size);
     V = size;
    
     int **graph = (int **)malloc(size * sizeof(int *));
@@ -154,3 +152,4 @@ int main() {
     free(mst);
     return 0;
 }
+
